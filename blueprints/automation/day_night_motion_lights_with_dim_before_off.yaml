@@ -56,6 +56,14 @@ blueprint:
       default: 153
       selector:
         color_temp:
+    day_kelvin:
+      name: Day color temperature in kelvin
+      description: Color temperature, in day mode
+      default: 6500
+      selector:
+        number:
+          min: 2000
+          max: 6500
     day_select_color_option:
       name: Day color option
       description: Select which color option to use, color_rgb/color_temp or none(preserve last color), in day mode
@@ -68,6 +76,8 @@ blueprint:
               value: "color_rgb"
             - label: "Color Temperature"
               value: "color_temp"
+            - label: "Kelvin"
+              value: "kelvin"
             - label: "None"
               value: "none"
     night_brightness:
@@ -102,6 +112,14 @@ blueprint:
       default: 153
       selector:
         color_temp:
+    night_kelvin:
+      name: Night color temperature in kelvin
+      description: Color temperature, in night mode
+      default: 6500
+      selector:
+        number:
+          min: 2000
+          max: 6500
     night_select_color_option:
       name: Night color option
       description: Select which color option to use, color_rgb/color_temp or none(preserve last color), in night mode
@@ -114,6 +132,8 @@ blueprint:
               value: "color_rgb"
             - label: "Color Temperature"
               value: "color_temp"
+            - label: "Kelvin"
+              value: "kelvin"
             - label: "None"
               value: "none"
     no_motion_dim_wait_day:
@@ -197,10 +217,12 @@ variables:
   no_motion_off_wait_night: !input no_motion_off_wait_night
   day_color: !input day_color
   day_color_temp: !input day_color_temp
+  day_kelvin: !input day_kelvin
   day_select_color_option: !input day_select_color_option
   day_brightness: !input day_brightness
   night_color: !input night_color
   night_color_temp: !input night_color_temp
+  night_kelvin: !input night_kelvin
   night_select_color_option: !input night_select_color_option
   night_brightness: !input night_brightness
   transition_time: !input transition_time
@@ -220,6 +242,10 @@ variables:
         {% set data_dict.value = data_dict.value
           ~ '"color_temp":"'
           ~ day_color_temp ~ '"' ~ ',' %}
+    {% elif day_select_color_option == 'kelvin' %}
+        {% set data_dict.value = data_dict.value
+          ~ '"kelvin":"'
+          ~ day_kelvin ~ '"' ~ ',' %}
     {% endif %}
     {{ '{' ~ data_dict.value[:-1] ~ '}' }}
   night_turn_on_data: >
@@ -238,6 +264,10 @@ variables:
         {% set data_dict.value = data_dict.value
           ~ '"color_temp":"'
           ~ night_color_temp ~ '"' ~ ',' %}
+    {% elif night_select_color_option == 'kelvin' %}
+        {% set data_dict.value = data_dict.value
+          ~ '"kelvin":"'
+          ~ night_kelvin ~ '"' ~ ',' %}
     {% endif %}
     {{ '{' ~ data_dict.value[:-1] ~ '}' }}
 trigger:
