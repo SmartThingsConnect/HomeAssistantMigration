@@ -27,9 +27,9 @@ blueprint:
         select:
           mode: dropdown
           options:
-            - label: "On"
+            - label: "On(Open)"
               value: "on"
-            - label: "Off"
+            - label: "Off(Closed)"
               value: "off"
             - label: "Unknown"
               value: "unknown"
