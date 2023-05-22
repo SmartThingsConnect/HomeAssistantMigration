@@ -181,6 +181,35 @@ blueprint:
           min: 0
           max: 60
           unit_of_measurement: seconds
+    retry_if_fail:
+      name: Retry turn on/off action if entity state failed to change, the first retry will run immediately if initial action attempt failed
+      description: Retry will only apply to turn on/off actions, dim action is excluded
+      default: false
+      selector:
+        boolean:
+    number_of_retries:
+      name: Number of retries if entity state failed to change after turn on/off actions, the total actions issued will be 1 + number of retries if all of them are failed, otherwise it well stop once success
+      description: Retry will only apply to turn on/off actions, dim action is excluded
+      default: 3
+      selector:
+        number:
+          min: 0
+          max: 15
+    retry_wait:
+      name: Wait time before retrying
+      description: Wait time before verifying entity state and decide if retry action is needed
+      default: 3
+      selector:
+        number:
+          min: 1
+          max: 60
+          unit_of_measurement: seconds
+    log_failed_action:
+      name: Write to logbook regarding which device(s) failed to turn on/off
+      description: The logbook entry will include friendly name of device(s) failed to turn on/off and number of attempts
+      default: false
+      selector:
+        boolean:
     master_bypass_condition:
       name: Master bypass condition
       description: Allow execution of the automation to be completely bypassed if this returns true(when you want the lights only to be turned on/off manually)
@@ -226,6 +255,9 @@ variables:
   night_select_color_option: !input night_select_color_option
   night_brightness: !input night_brightness
   transition_time: !input transition_time
+  retry_if_fail: !input retry_if_fail
+  number_of_retries: !input number_of_retries
+  log_failed_action: !input log_failed_action
   day_turn_on_data: >
     {% set data_dict = namespace(value='') %}
     {% set data_dict.value = data_dict.value
@@ -300,6 +332,36 @@ action:
               # brightness_pct: !input day_brightness
             target:
               entity_id: !input light_entities
+          - if:
+              - condition: template
+                value_template: "{{ retry_if_fail }}"
+              - condition: template
+                value_template: "{{ (expand(light_entities) | selectattr('state', 'eq', 'on') | list | length) != (expand(light_entities) | list | length) }}"
+            then:
+              - repeat:
+                  until:
+                    - condition: template
+                      value_template: "{{ (expand(light_entities) | selectattr('state', 'eq', 'on') | list | length) == (expand(light_entities) | list | length) or repeat.index == (number_of_retries | int ) }}"
+                  sequence:
+                    - if:
+                        - condition: template
+                          value_template: "{{ log_failed_action }}"
+                      then:
+                        - service: logbook.log
+                          data:
+                            name: "{{ this.entity_id }}"
+                            entity_id: "{{ this.entity_id }}"
+                            message: >-
+                              Failed to turn on {{
+                              expand(light_entities) | selectattr('state', 'ne',
+                              'on') | map(attribute = 'name') | list |
+                              join(', ') }}, retrying {{ repeat.index }} time(s)
+                    - service: light.turn_on
+                      data: "{{ day_turn_on_data }}"
+                      target:
+                        entity_id: !input light_entities
+                    - delay:
+                        seconds: !input retry_wait
         else:
           - service: light.turn_on
             data:
@@ -310,6 +372,36 @@ action:
               # brightness_pct: !input night_brightness
             target:
               entity_id: !input light_entities
+          - if:
+              - condition: template
+                value_template: "{{ retry_if_fail }}"
+              - condition: template
+                value_template: "{{ (expand(light_entities) | selectattr('state', 'eq', 'on') | list | length) != (expand(light_entities) | list | length) }}"
+            then:
+              - repeat:
+                  until:
+                    - condition: template
+                      value_template: "{{ (expand(light_entities) | selectattr('state', 'eq', 'on') | list | length) == (expand(light_entities) | list | length) or repeat.index == (number_of_retries | int) }}"
+                  sequence:
+                    - if:
+                        - condition: template
+                          value_template: "{{ log_failed_action }}"
+                      then:
+                        - service: logbook.log
+                          data:
+                            name: "{{ this.entity_id }}"
+                            entity_id: "{{ this.entity_id }}"
+                            message: >-
+                              Failed to turn on {{
+                              expand(light_entities) | selectattr('state', 'ne',
+                              'on') | map(attribute = 'name') | list |
+                              join(', ') }}, retrying {{ repeat.index }} time(s)
+                    - service: light.turn_on
+                      data: "{{ night_turn_on_data }}"
+                      target:
+                        entity_id: !input light_entities
+                    - delay:
+                        seconds: !input retry_wait
   - if:
       - condition: state
         entity_id: !input motion_entity
@@ -328,7 +420,7 @@ action:
               seconds: !input no_motion_dim_wait_day
           - if:
               - condition: template
-                value_template: "{{ expand(light_entities) | selectattr('state', '==', 'on') | list | count > 0 }}"
+                value_template: "{{ expand(light_entities) | selectattr('state', '==', 'on') | list | length > 0 }}"
                 # Don't dim if turn on is bypassed
               # - condition: template
               #   value_template: "{{ not turn_on_bypass_condition }}"
@@ -348,7 +440,7 @@ action:
               seconds: !input no_motion_off_wait_day
           - if:
               - condition: template
-                value_template: "{{ expand(light_entities) | selectattr('state', '==', 'on') | list | count > 0 }}"
+                value_template: "{{ expand(light_entities) | selectattr('state', '==', 'on') | list | length > 0 }}"
               - condition: state
                 entity_id: !input motion_entity
                 state: "off"
@@ -359,12 +451,42 @@ action:
                 data: {}
                 target:
                   entity_id: !input light_entities
+              - if:
+                  - condition: template
+                    value_template: "{{ retry_if_fail }}"
+                  - condition: template
+                    value_template: "{{ (expand(light_entities) | selectattr('state', 'eq', 'off') | list | length) != (expand(light_entities) | list | length) }}"
+                then:
+                  - repeat:
+                      until:
+                        - condition: template
+                          value_template: "{{ (expand(light_entities) | selectattr('state', 'eq', 'off') | list | length) == (expand(light_entities) | list | length) or repeat.index == (number_of_retries | int) }}"
+                      sequence:
+                        - if:
+                            - condition: template
+                              value_template: "{{ log_failed_action }}"
+                          then:
+                            - service: logbook.log
+                              data:
+                                name: "{{ this.entity_id }}"
+                                entity_id: "{{ this.entity_id }}"
+                                message: >-
+                                  Failed to turn off {{
+                                  expand(light_entities) | selectattr('state', 'ne',
+                                  'off') | map(attribute = 'name') | list |
+                                  join(', ') }}, retrying {{ repeat.index }} time(s)
+                        - service: light.turn_off
+                          data: {}
+                          target:
+                            entity_id: !input light_entities
+                        - delay:
+                            seconds: !input retry_wait
         else:
           - delay:
               seconds: !input no_motion_dim_wait_night
           - if:
               - condition: template
-                value_template: "{{ expand(light_entities) | selectattr('state', '==', 'on') | list | count > 0 }}"
+                value_template: "{{ expand(light_entities) | selectattr('state', '==', 'on') | list | length > 0 }}"
               - condition: state
                 entity_id: !input motion_entity
                 state: "off"
@@ -381,7 +503,7 @@ action:
               seconds: !input no_motion_off_wait_night
           - if:
               - condition: template
-                value_template: "{{ expand(light_entities) | selectattr('state', '==', 'on') | list | count > 0 }}"
+                value_template: "{{ expand(light_entities) | selectattr('state', '==', 'on') | list | length > 0 }}"
               - condition: state
                 entity_id: !input motion_entity
                 state: "off"
@@ -392,5 +514,35 @@ action:
                 data: {}
                 target:
                   entity_id: !input light_entities
+              - if:
+                  - condition: template
+                    value_template: "{{ retry_if_fail }}"
+                  - condition: template
+                    value_template: "{{ (expand(light_entities) | selectattr('state', 'eq', 'off') | list | length) != (expand(light_entities) | list | length) }}"
+                then:
+                  - repeat:
+                      until:
+                        - condition: template
+                          value_template: "{{ (expand(light_entities) | selectattr('state', 'eq', 'off') | list | length) == (expand(light_entities) | list | length) or repeat.index == (number_of_retries | int) }}"
+                      sequence:
+                        - if:
+                            - condition: template
+                              value_template: "{{ log_failed_action }}"
+                          then:
+                            - service: logbook.log
+                              data:
+                                name: "{{ this.entity_id }}"
+                                entity_id: "{{ this.entity_id }}"
+                                message: >-
+                                  Failed to turn off {{
+                                  expand(light_entities) | selectattr('state', 'ne',
+                                  'off') | map(attribute = 'name') | list |
+                                  join(', ') }}, retrying {{ repeat.index }} time(s)
+                        - service: light.turn_off
+                          data: {}
+                          target:
+                            entity_id: !input light_entities
+                        - delay:
+                            seconds: !input retry_wait
 mode: restart
 max_exceeded: silent
