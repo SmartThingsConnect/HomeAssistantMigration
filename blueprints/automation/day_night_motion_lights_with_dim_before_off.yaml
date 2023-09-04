@@ -36,7 +36,7 @@ blueprint:
           mode: slider
     day_dim_brightness:
       name: Dimmed day brightness
-      description: Dimmed brightness, in day mode
+      description: Dimmed brightness, in day mode, brightness will not increase if it is already lower
       default: 50
       selector:
         number:
@@ -92,7 +92,7 @@ blueprint:
           mode: slider
     night_dim_brightness:
       name: Dimmed night brightness
-      description: Dimmed brightness, in night mode
+      description: Dimmed brightness, in night mode, brightness will not increase if it is already lower
       default: 1
       selector:
         number:
@@ -249,11 +249,13 @@ variables:
   day_kelvin: !input day_kelvin
   day_select_color_option: !input day_select_color_option
   day_brightness: !input day_brightness
+  day_dim_brightness: !input day_dim_brightness
   night_color: !input night_color
   night_color_temp: !input night_color_temp
   night_kelvin: !input night_kelvin
   night_select_color_option: !input night_select_color_option
   night_brightness: !input night_brightness
+  night_dim_brightness: !input night_dim_brightness
   transition_time: !input transition_time
   retry_if_fail: !input retry_if_fail
   number_of_retries: !input number_of_retries
@@ -430,12 +432,16 @@ action:
                 for:
                   seconds: !input no_motion_dim_wait_day
             then:
-              - service: light.turn_on
-                data:
-                  transition: !input transition_time
-                  brightness_pct: !input day_dim_brightness
-                target:
-                  entity_id: !input light_entities
+              - if:
+                  - condition: template
+                    value_template: "{{ state_attr(light_entities, 'brightness') or 0 > day_dim_brightness }}"
+                then:
+                  - service: light.turn_on
+                    data:
+                      transition: !input transition_time
+                      brightness_pct: !input day_dim_brightness
+                    target:
+                      entity_id: !input light_entities
           - delay:
               seconds: !input no_motion_off_wait_day
           - if:
@@ -493,12 +499,16 @@ action:
                 for:
                   seconds: !input no_motion_dim_wait_night
             then:
-              - service: light.turn_on
-                data:
-                  transition: !input transition_time
-                  brightness_pct: !input night_dim_brightness
-                target:
-                  entity_id: !input light_entities
+              - if:
+                  - condition: template
+                    value_template: "{{ state_attr(light_entities, 'brightness') or 0 > night_dim_brightness }}"
+                then:
+                  - service: light.turn_on
+                    data:
+                      transition: !input transition_time
+                      brightness_pct: !input night_dim_brightness
+                    target:
+                      entity_id: !input light_entities
           - delay:
               seconds: !input no_motion_off_wait_night
           - if:
