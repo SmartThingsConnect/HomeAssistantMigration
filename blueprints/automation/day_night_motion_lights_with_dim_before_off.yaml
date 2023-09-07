@@ -434,7 +434,7 @@ action:
             then:
               - if:
                   - condition: template
-                    value_template: "{{ (state_attr(light_entities, 'brightness') or 0 | int) > day_dim_brightness }}"
+                    value_template: "{{ (expand(light_entities) | selectattr('attributes.brightness', 'defined') | selectattr('attributes.brightness', '>', day_dim_brightness) | list | length) == (expand(light_entities) | selectattr('attributes.brightness', 'defined') | list | length) }}"
                 then:
                   - service: light.turn_on
                     data:
@@ -501,7 +501,7 @@ action:
             then:
               - if:
                   - condition: template
-                    value_template: "{{ (state_attr(light_entities, 'brightness') or 0 | int) > night_dim_brightness }}"
+                    value_template: "{{ (expand(light_entities) | selectattr('attributes.brightness', 'defined') | selectattr('attributes.brightness', '>', night_dim_brightness) | list | length) == (expand(light_entities) | selectattr('attributes.brightness', 'defined') | list | length) }}"
                 then:
                   - service: light.turn_on
                     data:
