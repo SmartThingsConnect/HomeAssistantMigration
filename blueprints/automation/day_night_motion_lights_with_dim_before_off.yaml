@@ -72,12 +72,10 @@ blueprint:
         select:
           mode: dropdown
           options:
-            - label: "Color RGB"
-              value: "color_rgb"
-            - label: "Color Temperature"
-              value: "color_temp"
+            - label: "RGB Color"
+              value: "rgb_color"
             - label: "Kelvin"
-              value: "kelvin"
+              value: "color_temp_kelvin"
             - label: "None"
               value: "none"
     night_brightness:
@@ -128,12 +126,10 @@ blueprint:
         select:
           mode: dropdown
           options:
-            - label: "Color RGB"
-              value: "color_rgb"
-            - label: "Color Temperature"
-              value: "color_temp"
+            - label: "RGB Color"
+              value: "rgb_color"
             - label: "Kelvin"
-              value: "kelvin"
+              value: "color_temp_kelvin"
             - label: "None"
               value: "none"
     no_motion_dim_wait_day:
@@ -268,17 +264,13 @@ variables:
     {% set data_dict.value = data_dict.value
       ~ '"brightness_pct":"'
       ~ day_brightness ~ '"' ~ ',' %}
-    {% if day_select_color_option == 'color_rgb' %}
+    {% if day_select_color_option == 'rgb_color' %}
         {% set data_dict.value = data_dict.value
           ~ '"rgb_color":"'
           ~ day_color ~ '"' ~ ',' %}
-    {% elif day_select_color_option == 'color_temp' %}
-        {% set data_dict.value = data_dict.value
-          ~ '"color_temp":"'
-          ~ day_color_temp ~ '"' ~ ',' %}
     {% elif day_select_color_option == 'kelvin' %}
         {% set data_dict.value = data_dict.value
-          ~ '"kelvin":"'
+          ~ '"color_temp_kelvin":"'
           ~ day_kelvin ~ '"' ~ ',' %}
     {% endif %}
     {{ '{' ~ data_dict.value[:-1] ~ '}' }}
@@ -290,17 +282,13 @@ variables:
     {% set data_dict.value = data_dict.value
       ~ '"brightness_pct":"'
       ~ night_brightness ~ '"' ~ ',' %}
-    {% if night_select_color_option == 'color_rgb' %}
+    {% if night_select_color_option == 'rgb_color' %}
         {% set data_dict.value = data_dict.value
           ~ '"rgb_color":"'
           ~ night_color ~ '"' ~ ',' %}
-    {% elif night_select_color_option == 'color_temp' %}
-        {% set data_dict.value = data_dict.value
-          ~ '"color_temp":"'
-          ~ night_color_temp ~ '"' ~ ',' %}
     {% elif night_select_color_option == 'kelvin' %}
         {% set data_dict.value = data_dict.value
-          ~ '"kelvin":"'
+          ~ '"color_temp_kelvin":"'
           ~ night_kelvin ~ '"' ~ ',' %}
     {% endif %}
     {{ '{' ~ data_dict.value[:-1] ~ '}' }}
